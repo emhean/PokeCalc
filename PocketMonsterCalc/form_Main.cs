@@ -17,16 +17,22 @@ namespace PokeCalc
 {
     public partial class form_Main : Form
     {
+        StatsCalculator calc = new StatsCalculator();
+        Pokemon pokemon_current;
+        List<Pokemon> pokemon_list;
+        string tbx_previous_value; // Used when user enters a non-numerical value on IV/EV textboxes.
+
         public form_Main()
         {
             InitializeComponent();
             UI_Init();
         }
 
-        StatsCalculator calc = new StatsCalculator();
-        Pokemon pokemon_current;
-        List<Pokemon> pokemon_list;
-       
+        #region User Interface code
+
+        /// <summary>
+        /// Initialize the user interface.
+        /// </summary>
         void UI_Init()
         {
             for (int i = 1; i < 101; ++i)
@@ -65,15 +71,198 @@ namespace PokeCalc
             }
 
 
-            
-            tbx_IV_Atk.Click += FocusTextBox;
-            tbx_IV_Atk.KeyPress += CheckIfEnterKey;
+            #region Assign IV/EV editable textbox behaviour
+            foreach (Control gbox in Controls)
+            {
+                if(gbox is GroupBox groupBox)
+                {
+                    foreach (var control in gbox.Controls)
+                    {
+                        if (control is TextBox textBox)
+                        {
+                            if (textBox.Name.StartsWith("tbx_IV")
+                                || textBox.Name.StartsWith("tbx_EV"))
+                            {
+                                textBox.Click += UI_FocusTextBox;
+                                textBox.KeyPress += UI_CheckIfEnterKey;
+                            }
+                        }
+                    }
+                }
+            }
+            #endregion
+
         }
 
-        string tbx_previous_value; // Used when user enters a non-numerical value on IV/EV textboxes.
-        private void FocusTextBox(object sender, EventArgs e)
+
+        void UI_UpdateIV()
         {
-            if(sender is TextBox textBox)
+            pokemon_current.stats_iv = StatTextboxParser(
+                    tbx_IV_HP,
+                    tbx_IV_Atk,
+                    tbx_IV_Def,
+                    tbx_IV_SpAtk,
+                    tbx_IV_SpDef,
+                    tbx_IV_Speed);
+
+            CalculateLevels(pokemon_current);
+            UI_SetFinalStats(UI_GetSelectedLevel());
+        }
+
+        void UI_UpdateEV()
+        {
+            pokemon_current.stats_ev = StatTextboxParser(
+                tbx_EV_HP,
+                tbx_EV_Atk,
+                tbx_EV_Def,
+                tbx_EV_SpAtk,
+                tbx_EV_SpDef,
+                tbx_EV_Speed);
+
+            CalculateLevels(pokemon_current);
+            UI_SetFinalStats(UI_GetSelectedLevel());
+        }
+
+        #region Getters
+        /// <summary>
+        /// Gets the selected level from level combobox.
+        /// </summary>
+        /// <returns>The level in a non-index value.</returns>
+        int UI_GetSelectedLevel()
+        {
+            return cbx_Level.SelectedIndex + 1;
+        }
+        /// <summary>
+        /// [Rarely used] Returns the selected index from level combobox.
+        /// </summary>
+        int UI_GetSelectedLevelIndex()
+        {
+            return cbx_Level.SelectedIndex;
+        }
+
+        /// <summary>
+        /// Get the selected index from pokemon combobox.
+        /// <para>Since this list is dependent on top-down loading there is no real value alternative method.</para>
+        /// </summary>
+        int UI_GetSelectedPokemonIndex()
+        {
+            return cbx_Pokemon.SelectedIndex;
+        }
+        #endregion
+
+
+        #region Setters
+        /// <summary>
+        /// Set the image of the pokemon.
+        /// </summary>
+        void UI_SetImage(string pokemonName)
+        {
+            pic_Pokemon.Image = Image.FromFile(string.Format("data/gif/{0}.gif", pokemonName));
+        }
+
+        /// <summary>
+        /// Set the pokemon-types images for the pictureboxes
+        /// </summary>
+        void UI_SetTypes(string type1, string type2)
+        {
+            if (!string.IsNullOrEmpty(type1))
+                pic_Type1.Image = GetTypeBitmap(type1);
+
+            if (!string.IsNullOrEmpty(type2))
+                pic_Type2.Image = GetTypeBitmap(type2);
+        }
+
+        /// <summary>
+        /// Sets the textboxes text from a stats struct.
+        /// </summary>
+        void UI_SetTextboxesFromStat(Stats stats, TextBox hp, TextBox atk, TextBox def, TextBox spAtk, TextBox spDef, TextBox spd)
+        {
+            hp.Text = stats.HP.ToString();
+            atk.Text = stats.Attack.ToString();
+            def.Text = stats.Defence.ToString();
+            spAtk.Text = stats.SpAtk.ToString();
+            spDef.Text = stats.SpDef.ToString();
+            spd.Text = stats.Speed.ToString();
+        }
+
+
+        // Design choice:
+        // Since some code actually GETS the value from the pokemon stats struct  
+        //  - and SETS the value to the textboxes....?
+        // Conclusion:
+        // These methods is a Setter for the UI and will therefore be in the setter region.
+
+        /// <summary>
+        /// Sets the final stats textboxes based of a level.
+        /// </summary>
+        void UI_SetFinalStats(int level)
+        {
+            tbx_Stat_HP.Text = calc[level].HP.ToString();
+            tbx_Stat_Atk.Text = calc[level].Attack.ToString();
+            tbx_Stat_Def.Text = calc[level].Defence.ToString();
+            tbx_Stat_SpAtk.Text = calc[level].SpAtk.ToString();
+            tbx_Stat_SpDef.Text = calc[level].SpDef.ToString();
+            tbx_Stat_Speed.Text = calc[level].Speed.ToString();
+        }
+
+        /// <summary>
+        /// Sets the base-stats textboxes from pokemon.
+        /// </summary>
+        void UI_SetBaseStats()
+        {
+            tbx_BaseHP.Text = pokemon_current.stats_base.HP.ToString();
+            tbx_BaseAtk.Text = pokemon_current.stats_base.Attack.ToString();
+            tbx_BaseDef.Text = pokemon_current.stats_base.Defence.ToString();
+            tbx_BaseSpAtk.Text = pokemon_current.stats_base.SpAtk.ToString();
+            tbx_BaseSpDef.Text = pokemon_current.stats_base.SpDef.ToString();
+            tbx_BaseSpeed.Text = pokemon_current.stats_base.Speed.ToString();
+        }
+
+        /// <summary>
+        /// Sets the current pokemon based of index
+        /// </summary>
+        /// <param name="index">Use Get</param>
+        void UI_SetPokemon(int index)
+        {
+            pokemon_current = pokemon_list[index]; // Copy from stack
+
+            CalculateLevels(pokemon_current);
+
+            UI_SetFinalStats(1);
+            UI_SetBaseStats();
+
+            UI_SetTextboxesFromStat(pokemon_current.stats_ev,
+                tbx_EV_HP,
+                tbx_EV_Atk,
+                tbx_EV_Def,
+                tbx_EV_SpAtk,
+                tbx_EV_SpDef,
+                tbx_EV_Speed);
+
+            UI_SetTextboxesFromStat(pokemon_current.stats_iv,
+                tbx_IV_HP,
+                tbx_IV_Atk,
+                tbx_IV_Def,
+                tbx_IV_SpAtk,
+                tbx_IV_SpDef,
+                tbx_IV_Speed);
+
+            UI_SetImage(pokemon_current.name.ToLower());
+
+            cbx_Level.SelectedIndex = 0;
+
+            UI_SetTypes(pokemon_current.type1, pokemon_current.type2);
+        }
+        #endregion
+
+
+        #region Event Hooks
+        /// <summary>
+        /// Focus the textbox to make it editable.
+        /// </summary>
+        void UI_FocusTextBox(object sender, EventArgs e)
+        {
+            if (sender is TextBox textBox)
             {
                 textBox.ReadOnly = false;
                 textBox.Focus();
@@ -82,13 +271,13 @@ namespace PokeCalc
             }
         }
 
-        private void CheckIfEnterKey(object sender, KeyPressEventArgs e)
+        void UI_CheckIfEnterKey(object sender, KeyPressEventArgs e)
         {
             if (sender is TextBox textBox)
             {
                 if (e.KeyChar == (char)Keys.Enter && textBox.ReadOnly)
                 {
-                    FocusTextBox(textBox, EventArgs.Empty);
+                    UI_FocusTextBox(textBox, EventArgs.Empty);
                 }
                 else if (e.KeyChar == (char)Keys.Enter)
                 {
@@ -97,7 +286,7 @@ namespace PokeCalc
                     {
                         // We use the name of the control to determine whether its a textbox
                         // for the EV values or IV values
-                        if(textBox.Name.StartsWith("tbx_EV"))
+                        if (textBox.Name.StartsWith("tbx_EV"))
                         {
                             gbox_EV.Focus();
 
@@ -112,7 +301,7 @@ namespace PokeCalc
                                 textBox.Text = "252";
                             }
                         }
-                        else // It's a IV box
+                        else if (textBox.Name.StartsWith("tbx_IV"))
                         {
                             gbox_IV.Focus();
 
@@ -128,8 +317,8 @@ namespace PokeCalc
                             }
                         }
 
-                        Update_EV();
-                        Update_IV();
+                        UI_UpdateEV();
+                        UI_UpdateIV();
                     }
                     else
                     {
@@ -143,38 +332,12 @@ namespace PokeCalc
         }
 
 
+        #endregion
 
-        private static ImageCodecInfo GetEncoderInfo(String mimeType)
-        {
-            int j;
-            ImageCodecInfo[] encoders;
-            encoders = ImageCodecInfo.GetImageEncoders();
-            for (j = 0; j < encoders.Length; ++j)
-            {
-                if (encoders[j].MimeType == mimeType)
-                    return encoders[j];
-            }
-            return null;
-        }
 
-        void UI_SetImage(string pokemonName)
-        {
-            pic_Pokemon.Image = Image.FromFile(string.Format("data/gif/{0}.gif", pokemonName));
+        #endregion // End of region User Interface code
 
-            //image.SaveAdd(new System.Drawing.Imaging.EncoderParameters(frameCount));
-            //var codec = GetEncoderInfo("image/gif");
-            //image.Save(responseStream, codec, null);
-            //image.Save(fileName, ImageFormat.Gif);
-            //int frameCount = image.GetFrameCount(System.Drawing.Imaging.FrameDimension.Time);
-            //for (int i = 0; i < pic_Pokemon_frameCount; ++i)
-            //{
-            //    //image.SelectActiveFrame(System.Drawing.Imaging.FrameDimension.Time, i);
-            //}
-            //pic_Pokemon.Image = image;
-            //timer1.Start();
-            //Bitmap bitmap2 = new Bitmap(responseStream);
-            //bitmap2.Save(string.Format("data/gif/{0}.gif", pokemonName.ToLower()));
-        }
+
 
 
         Bitmap GetTypeBitmap(string type)
@@ -205,25 +368,6 @@ namespace PokeCalc
             throw new Exception("Type does not exist!");
         }
 
-        void UI_SetTypes(string type1, string type2)
-        {
-            if( !string.IsNullOrEmpty(type1))
-                pic_Type1.Image = GetTypeBitmap(type1);
-
-            if( !string.IsNullOrEmpty(type2))
-                pic_Type2.Image = GetTypeBitmap(type2);
-        }
-
-        void UI_SetTextboxesFromStat(Stats stats, TextBox hp, TextBox atk, TextBox def, TextBox spAtk, TextBox spDef, TextBox spd)
-        {
-            hp.Text = stats.HP.ToString();
-            atk.Text = stats.Attack.ToString();
-            def.Text = stats.Defence.ToString();
-            spAtk.Text = stats.SpAtk.ToString();
-            spDef.Text = stats.SpDef.ToString();
-            spd.Text = stats.Speed.ToString();
-        }
-
         Stats StatTextboxParser(TextBox hp, TextBox atk, TextBox def, TextBox spAtk, TextBox spDef, TextBox spd)
         {
             return new Stats(
@@ -235,66 +379,9 @@ namespace PokeCalc
                 int.Parse(spd.Text));
         }
 
-        int GetSelectedLevel()
-        {
-            return cbx_Level.SelectedIndex + 1;
-        }
-
-        void UI_SetFinalStats(int level)
-        {
-            tbx_Stat_HP.Text = calc[level].HP.ToString();
-            tbx_Stat_Atk.Text = calc[level].Attack.ToString();
-            tbx_Stat_Def.Text = calc[level].Defence.ToString();
-            tbx_Stat_SpAtk.Text = calc[level].SpAtk.ToString();
-            tbx_Stat_SpDef.Text = calc[level].SpDef.ToString();
-            tbx_Stat_Speed.Text = calc[level].Speed.ToString();
-        }
-
-        void UI_SetBaseStats()
-        {
-            tbx_BaseHP.Text = pokemon_current.stats_base.HP.ToString();
-            tbx_BaseAtk.Text = pokemon_current.stats_base.Attack.ToString();
-            tbx_BaseDef.Text = pokemon_current.stats_base.Defence.ToString();
-            tbx_BaseSpAtk.Text = pokemon_current.stats_base.SpAtk.ToString();
-            tbx_BaseSpDef.Text = pokemon_current.stats_base.SpDef.ToString();
-            tbx_BaseSpeed.Text = pokemon_current.stats_base.Speed.ToString();
-        }
-
         void CalculateLevels(Pokemon pokemon)
         {
             calc.Update(pokemon); // Update calculator
-        }
-
-        void UI_SetPokemon(int index)
-        {
-            pokemon_current = pokemon_list[index]; // Copy from stack
-
-            CalculateLevels(pokemon_current);
-
-            UI_SetFinalStats(1);
-            UI_SetBaseStats();
-
-            UI_SetTextboxesFromStat(pokemon_current.stats_ev, 
-                tbx_EV_HP, 
-                tbx_EV_Atk, 
-                tbx_EV_Def, 
-                tbx_EV_SpAtk, 
-                tbx_EV_SpDef, 
-                tbx_EV_Speed);
-
-            UI_SetTextboxesFromStat(pokemon_current.stats_iv,
-                tbx_IV_HP,
-                tbx_IV_Atk,
-                tbx_IV_Def,
-                tbx_IV_SpAtk,
-                tbx_IV_SpDef,
-                tbx_IV_Speed);
-
-            UI_SetImage(pokemon_current.name.ToLower());
-
-            cbx_Level.SelectedIndex = 0;
-
-            UI_SetTypes(pokemon_current.type1, pokemon_current.type2);
         }
 
         private void cbx_Level_SelectedIndexChanged(object sender, EventArgs e)
@@ -305,50 +392,15 @@ namespace PokeCalc
 
         private void cbx_Pokemon_SelectedIndexChanged(object sender, EventArgs e)
         {
-            UI_SetPokemon(cbx_Pokemon.SelectedIndex);
-        }
-
-        private void createXMLToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            //string[] lines = File.ReadAllLines("pokemon_names.txt");
-            //for(int i = 0; i < lines.Length; ++i)
-            //{
-            //}
+            UI_SetPokemon( UI_GetSelectedPokemonIndex());
         }
 
 
-        void Update_IV()
-        {
-            pokemon_current.stats_iv = StatTextboxParser(
-                    tbx_IV_HP,
-                    tbx_IV_Atk,
-                    tbx_IV_Def,
-                    tbx_IV_SpAtk,
-                    tbx_IV_SpDef,
-                    tbx_IV_Speed);
-
-            CalculateLevels(pokemon_current);
-            UI_SetFinalStats(GetSelectedLevel());
-        }
-
-        void Update_EV()
-        {
-            pokemon_current.stats_ev = StatTextboxParser(
-                tbx_EV_HP,
-                tbx_EV_Atk,
-                tbx_EV_Def,
-                tbx_EV_SpAtk,
-                tbx_EV_SpDef,
-                tbx_EV_Speed);
-
-            CalculateLevels(pokemon_current);
-            UI_SetFinalStats(GetSelectedLevel());
-        }
 
         private void btn_IV_EV_Update_Click(object sender, EventArgs e)
         {
-            Update_IV();
-            Update_EV();
+            UI_UpdateIV();
+            UI_UpdateEV();
         }
 
         private void sSDBToolStripMenuItem_Click(object sender, EventArgs e)
@@ -448,6 +500,13 @@ namespace PokeCalc
             
         }
 
+        private void cbox_AutoUpdateValues_CheckedChanged(object sender, EventArgs e)
+        {
+            btn_IV_EV_Update.Visible = !(sender as CheckBox).Checked;
+        }
+
+
+
         void Save(Image image, string fileName)
         {
             // Gdi+ constants absent from System.Drawing.
@@ -527,7 +586,6 @@ namespace PokeCalc
                 firstBitmap.SaveAdd(encoderParamsFlush);
             }
         }
-
         private ImageCodecInfo GetEncoder(ImageFormat format)
         {
             ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
@@ -540,11 +598,18 @@ namespace PokeCalc
             }
             return null;
         }
-
-        private void cbox_AutoUpdateValues_CheckedChanged(object sender, EventArgs e)
+        static ImageCodecInfo GetEncoderInfo(String mimeType)
         {
-            btn_IV_EV_Update.Visible = !(sender as CheckBox).Checked;
+            int j;
+            ImageCodecInfo[] encoders;
+            encoders = ImageCodecInfo.GetImageEncoders();
+            for (j = 0; j < encoders.Length; ++j)
+            {
+                if (encoders[j].MimeType == mimeType)
+                    return encoders[j];
+            }
+            return null;
         }
-    }
 
+    }
 }

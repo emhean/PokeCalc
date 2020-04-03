@@ -917,7 +917,6 @@
             this.createXMLToolStripMenuItem.Name = "createXMLToolStripMenuItem";
             this.createXMLToolStripMenuItem.Size = new System.Drawing.Size(160, 26);
             this.createXMLToolStripMenuItem.Text = "Create XML";
-            this.createXMLToolStripMenuItem.Click += new System.EventHandler(this.createXMLToolStripMenuItem_Click);
             // 
             // gbox_Stats
             // 
