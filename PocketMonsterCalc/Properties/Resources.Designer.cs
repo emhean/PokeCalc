@@ -63,6 +63,16 @@ namespace PokeCalc.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap Missingno_RB {
+            get {
+                object obj = ResourceManager.GetObject("Missingno_RB", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap type_bug {
             get {
                 object obj = ResourceManager.GetObject("type_bug", resourceCulture);

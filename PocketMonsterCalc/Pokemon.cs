@@ -7,9 +7,7 @@
         public int dexID;
 
         public byte level;
-        public Nature nature;
 
-        //public Stats stats_final;
         public Stats stats_base;
         public Stats stats_ev;
         public Stats stats_iv;
@@ -25,8 +23,41 @@
             this.level = 1;
             this.stats_ev = Stats.Zero;
             this.stats_iv = Stats.Zero;
-            //this.stats_final = Stats.Zero;
-            this.nature = Nature.Neutral;
+        }
+
+        /// <summary>
+        /// Create a Pokémon from a string.
+        /// </summary>
+        /// <param name="str">Example: 001;Bulbasaur;45;49;49;65;65;45</param>
+        public Pokemon(string str)
+        {
+            //001;Bulbasaur;45;49;49;65;65;45
+            string[] split = str.Split(';');
+
+            dexID = int.Parse(split[0]);
+            name = split[1];
+
+            type1 = string.Empty;
+            type2 = string.Empty;
+            this.level = 1;
+            this.stats_ev = Stats.Zero;
+            this.stats_iv = Stats.Zero;
+
+            string[] split_stats = new string[split.Length - 2];
+
+            for (int i = 0; i < split.Length - 2; ++i)
+            {
+                split_stats[i] = split[i + 2];
+            }
+
+            stats_base = new Stats(split_stats);
+        }
+
+
+
+        public override string ToString()
+        {
+            return string.Format("{0} [{1}]", name, dexID);
         }
 
         //public void UpdateFinalStats()

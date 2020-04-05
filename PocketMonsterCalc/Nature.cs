@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace PokeCalc
 {
@@ -33,13 +34,30 @@ namespace PokeCalc
             new Nature("Quirky"),
         };
 
+        //public Nature this [int index] => natures[index];
+
+        public static ReadOnlyCollection<Nature> GetNatures()
+        {
+            return natures.AsReadOnly();
+        }
+
         public static Nature GetNature(string name)
         {
             return natures.Find(x => (x.Name.Equals(name)));
         }
 
+        /// <summary>
+        /// The name of the nature.
+        /// </summary>
         public string Name;
-        public string fav_flavor, dis_flavor;
+        /// <summary>
+        /// Liked berry flavor.
+        /// </summary>
+        public string fav_flavor;
+        /// <summary>
+        /// Disliked berry flavor.
+        /// </summary>
+        public string dis_flavor;
 
         public float Attack;
         public float Defence;
@@ -60,45 +78,12 @@ namespace PokeCalc
             this.Speed = speed;
         }
 
-        static Nature neutral = new Nature("None");
-        public static Nature Neutral
+        /// <summary>
+        /// Returns the name of the nature.
+        /// </summary>
+        public override string ToString()
         {
-            get => neutral;
+            return Name;
         }
     }
 }
-
-#region Junk
-//#region Operators
-//public static Stats operator +(Stats s1, Stats s2)
-//{
-//    return new Stats(
-//        s1.HP + s2.HP,
-//        s1.Attack + s2.Attack,
-//        s1.Defence + s2.Defence,
-//        s1.SpAtk + s2.SpAtk,
-//        s1.SpDef + s2.SpDef,
-//        s1.SpDef + s2.Speed);
-//}
-//public static Stats operator -(Stats s1, Stats s2)
-//{
-//    return new Stats(
-//        s1.HP - s2.HP,
-//        s1.Attack - s2.Attack,
-//        s1.Defence - s2.Defence,
-//        s1.SpAtk - s2.SpAtk,
-//        s1.SpDef - s2.SpDef,
-//        s1.SpDef - s2.Speed);
-//}
-//public static Stats operator *(Stats s1, Stats s2)
-//{
-//    return new Stats(
-//        s1.HP * s2.HP,
-//        s1.Attack * s2.Attack,
-//        s1.Defence * s2.Defence,
-//        s1.SpAtk * s2.SpAtk,
-//        s1.SpDef * s2.SpDef,
-//        s1.SpDef * s2.Speed);
-//}
-//#endregion
-#endregion

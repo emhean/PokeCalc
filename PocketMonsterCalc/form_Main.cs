@@ -31,69 +31,224 @@ namespace PokeCalc
         #region User Interface code
 
         /// <summary>
-        /// Initialize the user interface.
+        /// Initialize the user interface and imports pokemon from file.
         /// </summary>
         void UI_Init()
         {
             for (int i = 1; i < 101; ++i)
             {
                 cbx_Level.Items.Add(i);
+                cbx_IVFind_Level.Items.Add(i);
             }
 
-            pokemon_list = new List<Pokemon>();
-            XmlDocument doc = new XmlDocument();
-            doc.Load("data/pokemon.xml");
-
-            var pkmns = doc.GetElementsByTagName("pkmn");
-            foreach(XmlElement p in pkmns)
+            foreach(Nature nat in Nature.GetNatures())
             {
-                var xp = new Pokemon(
-                    int.Parse(p.GetAttribute("dexid")),
-                    p.GetAttribute("name"),
-                    p.GetAttribute("type1"),
-                    p.GetAttribute("type2"),
-                    new Stats(
-                        int.Parse(p.GetAttribute("hp")),
-                        int.Parse(p.GetAttribute("atk")),
-                        int.Parse(p.GetAttribute("def")),
-                        int.Parse(p.GetAttribute("spatk")),
-                        int.Parse(p.GetAttribute("spdef")),
-                        int.Parse(p.GetAttribute("spd"))
-                        ));
-
-                pokemon_list.Add(xp);
+                cbx_Nature.Items.Add(nat);
+                cbx_IVFind_Nature.Items.Add(nat);
             }
 
-            // Add to combo list
-            for(int i = 0; i < pokemon_list.Count; ++i)
-            {
-                cbx_Pokemon.Items.Add(string.Format("[{0}] {1}", pokemon_list[i].dexID, pokemon_list[i].name));
-            }
+            cbx_Nature.SelectedIndex = 0;
+
+            pokemon_list = UI_ImportPokemonFromTxt("data/stats.txt");
+            UI_AddPokemonToList(pokemon_list);
 
 
             #region Assign IV/EV editable textbox behaviour
-            foreach (Control gbox in Controls)
-            {
-                if(gbox is GroupBox groupBox)
-                {
-                    foreach (var control in gbox.Controls)
-                    {
-                        if (control is TextBox textBox)
-                        {
-                            if (textBox.Name.StartsWith("tbx_IV")
-                                || textBox.Name.StartsWith("tbx_EV"))
-                            {
-                                textBox.Click += UI_FocusTextBox;
-                                textBox.KeyPress += UI_CheckIfEnterKey;
-                            }
-                        }
-                    }
-                }
-            }
-            #endregion
+            tbx_EV_HP.Click += UI_FocusTextBox;
+            tbx_EV_HP.KeyPress += UI_CheckIfEnterKey;
+            tbx_EV_Atk.Click += UI_FocusTextBox;
+            tbx_EV_Atk.KeyPress += UI_CheckIfEnterKey;
+            tbx_EV_Def.Click += UI_FocusTextBox;
+            tbx_EV_Def.KeyPress += UI_CheckIfEnterKey;
+            tbx_EV_SpAtk.Click += UI_FocusTextBox;
+            tbx_EV_SpAtk.KeyPress += UI_CheckIfEnterKey;
+            tbx_EV_SpDef.Click += UI_FocusTextBox;
+            tbx_EV_SpDef.KeyPress += UI_CheckIfEnterKey;
+            tbx_EV_Speed.Click += UI_FocusTextBox;
+            tbx_EV_Speed.KeyPress += UI_CheckIfEnterKey;
 
+            tbx_IV_HP.Click += UI_FocusTextBox;
+            tbx_IV_HP.KeyPress += UI_CheckIfEnterKey;
+            tbx_IV_Atk.Click += UI_FocusTextBox;
+            tbx_IV_Atk.KeyPress += UI_CheckIfEnterKey;
+            tbx_IV_Def.Click += UI_FocusTextBox;
+            tbx_IV_Def.KeyPress += UI_CheckIfEnterKey;
+            tbx_IV_SpAtk.Click += UI_FocusTextBox;
+            tbx_IV_SpAtk.KeyPress += UI_CheckIfEnterKey;
+            tbx_IV_SpDef.Click += UI_FocusTextBox;
+            tbx_IV_SpDef.KeyPress += UI_CheckIfEnterKey;
+            tbx_IV_Speed.Click += UI_FocusTextBox;
+            tbx_IV_Speed.KeyPress += UI_CheckIfEnterKey;
+            #endregion
         }
 
+
+        /// <summary>
+        /// Create the shit file. Zygarde causes a crash fuck his 10% Forme and 50% Forme.
+        /// </summary>
+        /// <param name="file"></param>
+        void UI_CreateFileFromShitFile(string file)
+        {
+            string[] lines = File.ReadAllLines(file);
+
+            List<string> list_new = new List<string>();
+            StringBuilder sb = new StringBuilder();
+            string[] split;
+
+            // For lazy way to check numbers later
+            string[] numbers = new string[]
+            {
+                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
+            };
+
+            for(int i = 0; i < lines.Length; ++i) // line index
+            {
+                sb.Clear(); // Clear the stringbuilder from previous iteration.
+
+                split = lines[i].Split(' '); // line split
+
+                sb.Append(split[0]); // append first element which is always dex id
+
+                // This code is here to fix the problem with importing pokemon such as 
+                // Charizard (Mega Charizard X)
+                // Because there's an extra letter in the name which causes problem with the string split.
+                // The code below finds the first digit after the name and sets the offset to match it.
+                int offset = 0;
+
+                List<int> exclusions = new List<int>();
+
+                bool isValue = false;
+                for (int n = 0; n < numbers.Length; ++n) 
+                {
+                    if (split[3].Contains(numbers[n]))
+                        isValue = true;
+                }
+
+                if ( !isValue)
+                {
+                    exclusions.Add(3);
+
+                    // Finds last index of name
+                    for (int x = 4; x < split.Length; ++x)
+                    {
+                        exclusions.Add(x);
+                        for (int n = 0; n < numbers.Length; ++n)  // iterate all digits. Might be a better way to do this.
+                        {
+                            if (split[x].StartsWith(numbers[n]))
+                            {
+                                offset = x - 3;
+                                exclusions.Remove(x);
+                                break;
+                            }
+                        }
+                        if (offset != 0) // This to break the whole loop because value is set.
+                            break;
+                    }
+                }
+
+                for (int j = 2; j < 9 + offset; ++j) // split index
+                {
+                    bool append = true;
+
+                    for(int ex = 0; ex < exclusions.Count; ++ex)
+                    {
+                        if(j == exclusions[ex])
+                        {
+                            append = false;
+                            break;
+                        }
+                    }
+
+                    if(append)
+                    {
+                        sb.Append(';'); // append space otherwise its all one single string.
+                        sb.Append(split[j]);
+                    }
+                    else
+                    {
+                        sb.Append(' '); // append space otherwise its all one single string.
+                        sb.Append(split[j]);
+                    }
+                }
+
+                list_new.Add(sb.ToString()); // append the string from the stringbuilder.
+            }
+
+
+            File.WriteAllLines("data/stats.txt", list_new.ToArray());
+        }
+
+
+        /// <summary>
+        /// DO NOT USE.
+        /// </summary>
+        List<Pokemon> UI_ImportPokemonFromXML(string file)
+        {
+            var list = new List<Pokemon>();
+
+            // Old XML code
+            //XmlDocument doc = new XmlDocument();
+            //doc.Load("data/pokemon.xml");
+
+            //var pkmns = doc.GetElementsByTagName("pkmn");
+            //foreach(XmlElement p in pkmns)
+            //{
+            //    var xp = new Pokemon(
+            //        int.Parse(p.GetAttribute("dexid")),
+            //        p.GetAttribute("name"),
+            //        p.GetAttribute("type1"),
+            //        p.GetAttribute("type2"),
+            //        new Stats(
+            //            int.Parse(p.GetAttribute("hp")),
+            //            int.Parse(p.GetAttribute("atk")),
+            //            int.Parse(p.GetAttribute("def")),
+            //            int.Parse(p.GetAttribute("spatk")),
+            //            int.Parse(p.GetAttribute("spdef")),
+            //            int.Parse(p.GetAttribute("spd"))
+            //            ));
+
+            //    list.Add(xp);
+            //}
+
+            // Add to combo list
+            //for (int i = 0; i < pokemon_list.Count; ++i)
+            //{
+            //    cbx_Pokemon.Items.Add(string.Format("[{0}] {1}", list[i].dexID, list[i].name));
+            //}
+
+            return list;
+        }
+
+
+        List<Pokemon> UI_ImportPokemonFromTxt(string file)
+        {
+            List<Pokemon> list = new List<Pokemon>();
+
+            string[] lines = File.ReadAllLines(file);
+
+            for(int i = 0; i < lines.Length; ++i)
+            {
+                var p = new Pokemon(lines[i]);
+                list.Add(p);
+            }
+
+            return list;
+        }
+
+        /// <summary>
+        /// Adds pokemon to the combobox.
+        /// </summary>
+        void UI_AddPokemonToList(List<Pokemon> list)
+        {
+            for(int i = 0; i < list.Count; ++i)
+            {
+                //object item = string.Format("[{0}] {1}", list[i].dexID, list[i].name);
+                //object item = string.Format("{0} [{1}]", list[i].name, list[i].dexID);
+                var item = list[i];
+
+                cbx_Pokemon.Items.Add(item);
+            }
+        }
 
         void UI_UpdateIV()
         {
@@ -123,6 +278,7 @@ namespace PokeCalc
             UI_SetFinalStats(UI_GetSelectedLevel());
         }
 
+
         #region Getters
         /// <summary>
         /// Gets the selected level from level combobox.
@@ -148,6 +304,16 @@ namespace PokeCalc
         {
             return cbx_Pokemon.SelectedIndex;
         }
+
+        Pokemon UI_GetSelectedPokemon()
+        {
+            return (Pokemon)cbx_Pokemon.Items[UI_GetSelectedPokemonIndex()];
+        }
+
+        Nature UI_GetSelectedNature()
+        {
+            return (Nature)cbx_Nature.Items[cbx_Nature.SelectedIndex];
+        }
         #endregion
 
 
@@ -157,7 +323,23 @@ namespace PokeCalc
         /// </summary>
         void UI_SetImage(string pokemonName)
         {
-            pic_Pokemon.Image = Image.FromFile(string.Format("data/gif/{0}.gif", pokemonName));
+            Image img;
+
+            try
+            {
+                // This might throw an FileNotFound exception.
+                img = Image.FromFile(string.Format("data/gif/{0}.gif", pokemonName));
+
+                // If here, then file above was found.
+                pic_Pokemon.Image = img;
+            }
+            catch
+            {
+                // Set image to MissingNO because no image for pokemon was found.
+                img = PokeCalc.Properties.Resources.Missingno_RB;
+            }
+
+            pic_Pokemon.Image = img;
         }
 
         /// <summary>
@@ -197,12 +379,14 @@ namespace PokeCalc
         /// </summary>
         void UI_SetFinalStats(int level)
         {
-            tbx_Stat_HP.Text = calc[level].HP.ToString();
-            tbx_Stat_Atk.Text = calc[level].Attack.ToString();
-            tbx_Stat_Def.Text = calc[level].Defence.ToString();
-            tbx_Stat_SpAtk.Text = calc[level].SpAtk.ToString();
-            tbx_Stat_SpDef.Text = calc[level].SpDef.ToString();
-            tbx_Stat_Speed.Text = calc[level].Speed.ToString();
+            var stats = calc.GetStats(level, pokemon_current);
+
+            tbx_Stat_HP.Text = stats.HP.ToString();
+            tbx_Stat_Atk.Text = stats.Attack.ToString();
+            tbx_Stat_Def.Text = stats.Defence.ToString();
+            tbx_Stat_SpAtk.Text = stats.SpAtk.ToString();
+            tbx_Stat_SpDef.Text = stats.SpDef.ToString();
+            tbx_Stat_Speed.Text = stats.Speed.ToString();
         }
 
         /// <summary>
@@ -222,9 +406,9 @@ namespace PokeCalc
         /// Sets the current pokemon based of index
         /// </summary>
         /// <param name="index">Use Get</param>
-        void UI_SetPokemon(int index)
+        void UI_SetPokemon()
         {
-            pokemon_current = pokemon_list[index]; // Copy from stack
+            pokemon_current = UI_GetSelectedPokemon(); //pokemon_list[index]; // Copy from stack
 
             CalculateLevels(pokemon_current);
 
@@ -330,8 +514,6 @@ namespace PokeCalc
             }
 
         }
-
-
         #endregion
 
 
@@ -364,7 +546,6 @@ namespace PokeCalc
                 case "None": return Properties.Resources.type_none;
                 case "Water": return Properties.Resources.type_water;
             }
-
             throw new Exception("Type does not exist!");
         }
 
@@ -381,6 +562,7 @@ namespace PokeCalc
 
         void CalculateLevels(Pokemon pokemon)
         {
+            calc.SetNature(UI_GetSelectedNature());
             calc.Update(pokemon); // Update calculator
         }
 
@@ -389,10 +571,34 @@ namespace PokeCalc
             CalculateLevels(pokemon_current);
             UI_SetFinalStats(cbx_Level.SelectedIndex + 1);
         }
+        private void cbx_Nature_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            CalculateLevels(pokemon_current);
+            UI_SetFinalStats(cbx_Level.SelectedIndex + 1);
+
+
+            var nat = UI_GetSelectedNature();
+            UI_AdjustTextBoxToNature(nat.Attack, tbx_Stat_Atk);
+            UI_AdjustTextBoxToNature(nat.Defence, tbx_Stat_Def);
+            UI_AdjustTextBoxToNature(nat.SpAtk, tbx_Stat_SpAtk);
+            UI_AdjustTextBoxToNature(nat.SpDef, tbx_Stat_SpDef);
+            UI_AdjustTextBoxToNature(nat.Speed, tbx_Stat_Speed);
+        }
+
+        void UI_AdjustTextBoxToNature(float stat, TextBox textbox)
+        {
+            if (stat == 0.9f)
+                textbox.BackColor = Color.IndianRed;
+            else if (stat == 1.1f)
+                textbox.BackColor = Color.LightGreen;
+            else
+                textbox.BackColor = Color.Silver;
+        }
+
 
         private void cbx_Pokemon_SelectedIndexChanged(object sender, EventArgs e)
         {
-            UI_SetPokemon( UI_GetSelectedPokemonIndex());
+            UI_SetPokemon();
         }
 
 
@@ -611,5 +817,130 @@ namespace PokeCalc
             return null;
         }
 
+        private void btn_IV_SetZero_Click(object sender, EventArgs e)
+        {
+            tbx_IV_HP.Text = "0";
+            tbx_IV_Atk.Text = "0";
+            tbx_IV_Def.Text = "0";
+            tbx_IV_SpAtk.Text = "0";
+            tbx_IV_SpDef.Text = "0";
+            tbx_IV_Speed.Text = "0";
+            UI_UpdateIV();
+        }
+
+        private void btn_IV_SetMax_Click(object sender, EventArgs e)
+        {
+            tbx_IV_HP.Text = "31";
+            tbx_IV_Atk.Text = "31";
+            tbx_IV_Def.Text = "31";
+            tbx_IV_SpAtk.Text = "31";
+            tbx_IV_SpDef.Text = "31";
+            tbx_IV_Speed.Text = "31";
+            UI_UpdateIV();
+        }
+
+        private void btn_EV_SetZero_Click(object sender, EventArgs e)
+        {
+            tbx_EV_HP.Text = "0";
+            tbx_EV_Atk.Text = "0";
+            tbx_EV_Def.Text = "0";
+            tbx_EV_SpAtk.Text = "0";
+            tbx_EV_SpDef.Text = "0";
+            tbx_EV_Speed.Text = "0";
+            UI_UpdateEV();
+        }
+
+        private void btn_EV_SetMax_Click(object sender, EventArgs e)
+        {
+            tbx_EV_HP.Text = "252";
+            tbx_EV_Atk.Text = "252";
+            tbx_EV_Def.Text = "252";
+            tbx_EV_SpAtk.Text = "252";
+            tbx_EV_SpDef.Text = "252";
+            tbx_EV_Speed.Text = "252";
+            UI_UpdateEV();
+        }
+
+        private void cbx_IVFind_Start_Click(object sender, EventArgs e)
+        {
+            int level = cbx_IVFind_Level.SelectedIndex + 1;
+            Nature nat = (Nature)cbx_IVFind_Nature.Items[cbx_IVFind_Nature.SelectedIndex];
+            var poke = UI_GetSelectedPokemon();
+
+            var sc = new StatsCalculator();
+            sc.SetNature(nat);
+
+            FindIV(poke, level, sc, int.Parse(tbx_IVFind_HP.Text), tbx_IVFind_HPResult, Stats.STAT.HP);
+            FindIV(poke, level, sc, int.Parse(tbx_IVFind_Atk.Text), tbx_IVFind_AtkResult, Stats.STAT.ATTACK);
+            FindIV(poke, level, sc, int.Parse(tbx_IVFind_Def.Text), tbx_IVFind_DefResult, Stats.STAT.DEFENCE);
+            FindIV(poke, level, sc, int.Parse(tbx_IVFind_SpAtk.Text), tbx_IVFind_SpAtkResult, Stats.STAT.SP_ATTACK);
+            FindIV(poke, level, sc, int.Parse(tbx_IVFind_SpDef.Text), tbx_IVFind_SpDefResult, Stats.STAT.SP_DEFENCE);
+            FindIV(poke, level, sc, int.Parse(tbx_IVFind_Spd.Text), tbx_IVFind_SpdResult, Stats.STAT.SPEED);
+        }
+
+        int FindIV(Pokemon poke, int level, StatsCalculator sc, int IV_ToFind, TextBox out_iv, Stats.STAT stat)
+        {
+            Stats old_iv = poke.stats_iv;
+            poke.stats_iv = new Stats(0, 0, 0, 0, 0, 0);
+
+            List<int> matches = new List<int>();
+
+            for (int i = 0; i <= 32; ++i)
+            {
+                bool match;
+
+                // If match
+                if(stat == Stats.STAT.HP)
+                {
+                    poke.stats_iv.HP = i;
+                    match = (sc.GetStats(level, poke).HP == IV_ToFind);
+                }
+                else if (stat == Stats.STAT.ATTACK)
+                {
+                    poke.stats_iv.Attack = i;
+                    match = (sc.GetStats(level, poke).Attack == IV_ToFind);
+                }
+                else if (stat == Stats.STAT.DEFENCE)
+                {
+                    poke.stats_iv.Defence = i;
+                    match = (sc.GetStats(level, poke).Defence == IV_ToFind);
+                }
+                else if (stat == Stats.STAT.SP_ATTACK)
+                {
+                    poke.stats_iv.SpAtk = i;
+                    match = (sc.GetStats(level, poke).SpAtk == IV_ToFind);
+                }
+                else if (stat == Stats.STAT.SP_DEFENCE)
+                {
+                    poke.stats_iv.SpDef = i;
+                    match = (sc.GetStats(level, poke).SpDef == IV_ToFind);
+                }
+                else
+                {
+                    poke.stats_iv.Speed = i;
+                    match = (sc.GetStats(level, poke).Speed == IV_ToFind);
+                }
+
+                if(match)
+                {
+                    //out_iv.Text = i.ToString();
+                    poke.stats_iv = old_iv; // Set to previous IV before calculations
+
+                    matches.Add(i);
+                    //return i; // Return value
+                }
+            }
+
+
+            if (matches.Count > 1)
+            {
+                out_iv.Text = string.Format("{0}-{1}", matches[0], matches[matches.Count - 1]);
+            }
+
+            if (matches.Count != 0)
+                return matches[0];
+            else
+                return 0;
+        }
     }
 }
